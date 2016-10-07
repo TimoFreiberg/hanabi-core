@@ -15,19 +15,26 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+                     , src/types
+  exposed-modules:     Game
+                     , Connection
+                     , Transition
+                     , Types
   build-depends:       QuickCheck >= 2.8.2
                      , aeson
                      , base >= 4.7 && < 5
                      , bytestring >= 0.10.6.0
                      , containers >= 0.5.6.2
                      , hspec
+                     , lens
+                     , mtl >= 2.2.1
+                     , network >= 2.6.3.1
                      , random-shuffle
                      , servant-server
+                     , text >= 1.2.2.1
                      , wai
                      , warp
                      , websockets
-                     , lens
   default-language:    Haskell2010
 
 executable hanabi-exe
@@ -36,6 +43,9 @@ executable hanabi-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , hanabi
+                     , mtl >= 2.2.1
+                     , network >= 2.6.3.1
+                     , text >= 1.2.2.1
   default-language:    Haskell2010
 
 test-suite hanabi-test
