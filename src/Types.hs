@@ -11,7 +11,7 @@ import Data.Map (Map)
 data Card = Card
   { _color :: Color
   , _number :: Number
-  } deriving (Ord, Show, Eq)
+  } deriving (Show, Eq)
 
 data Color
   = White
@@ -28,6 +28,8 @@ data Number
   | Four
   | Five
   deriving (Ord, Show, Eq, Bounded, Enum)
+
+makeLenses ''Card
 
 newtype PlayerId =
   PlayerId String
@@ -46,6 +48,23 @@ data Knowledge
   | Number
   deriving (Show, Eq)
 
+data GameState = GameState
+  { _actingPlayer :: PlayerId
+  , _playerData :: Map PlayerId Hand
+  , _deck :: [Card]
+  , _playedCards :: Map Color [Card]
+  , _discardedCards :: [Card]
+  , _hints :: Int
+  , _fuckups :: Int
+  } deriving (Show)
+
+initGame p ps = GameState
+
+makeLenses ''GameState
+
+initialHints :: Int
+initialHints = 7
+
 class Pprint a  where
   pprint :: a -> String
 
@@ -61,5 +80,3 @@ instance Pprint Card where
 instance Pprint a =>
          Pprint [a] where
   pprint xs = concat ["[", intercalate ", " (map pprint xs), "]"]
-
-makeLenses ''Card

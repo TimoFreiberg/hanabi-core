@@ -6,7 +6,7 @@ module Game
 import Control.Lens (at, non, over, view)
 import qualified Data.List as List (delete)
 import qualified Data.Map.Strict as Map
-import GameState
+import Types
 import System.Random.Shuffle (shuffleM)
 
 import Types
