@@ -1,14 +1,10 @@
-module Game
-  ( initState
-  , putInStack
-  ) where
+module Game where
 
-import Control.Lens (at, non, over, view)
+import Control.Lens (at, non, over, view, to)
 import qualified Data.List as List (delete)
 import qualified Data.Map.Strict as Map
-import Types
+import Data.Maybe (fromMaybe)
 import System.Random.Shuffle (shuffleM)
-
 import Types
 
 colors :: [Color]
@@ -30,6 +26,9 @@ handSize 3 = 5
 handSize 4 = 4
 handSize 5 = 4
 handSize n = error ("the game does not support " ++ show n ++ " players!")
+
+maximumFailures :: Int
+maximumFailures = 3
 
 sortedGame :: [Card]
 sortedGame = concat (concat allCards)
@@ -71,10 +70,53 @@ inGroupsOf n xs =
 initState :: PlayerId -> [PlayerId] -> IO GameState
 initState startId ids = do
   (cards, dk) <- dealCards (length cleanIds)
-  let players = Map.fromList (zip cleanIds cards)
+  let hands = fmap createHand cards
+  let players = Map.fromList (zip cleanIds hands)
   return (GameState startId players dk Map.empty [] initialHints 0)
   where
     cleanIds = startId : List.delete startId ids
 
-putInStack :: Card -> GameState -> GameState
-putInStack card = over (playedCards . at (view color card) . non []) (card :)
+canPlayCard :: Card -> GameState -> Bool
+canPlayCard (Card col num1) game =
+  case getStack col game of
+    [] -> num1 == One
+    Card _ num2:_ -> num1 `isSucc` num2
+
+isFive :: Card -> Bool
+isFive (Card _ Five) = True
+isFive _ = False
+
+tooManyFailures :: GameState -> Bool
+tooManyFailures game = view fuckups game >= maximumFailures
+
+allStacksFilled :: GameState -> Bool
+allStacksFilled =
+  view
+    (playedCards .
+     to Map.elems . to (fmap length) . to (all (== length numbers)))
+
+getStack :: Color -> GameState -> [Card]
+getStack col game = fromMaybe [] (view (playedCards . at col) game)
+
+removeFromHand :: Card -> GameState -> GameState
+removeFromHand card game = over handOfActivePlayer (Map.delete card) game
+  where
+    handOfActivePlayer = playerHands . at (view actingPlayer game) . non Map.empty
+
+putOnPlayedStack :: Card -> GameState -> GameState
+putOnPlayedStack card =
+  over (playedCards . at (view color card) . non []) (card :)
+
+putOnDiscardedStack :: Card -> GameState -> GameState
+putOnDiscardedStack card = over discardedCards (card :)
+
+recordFailure :: GameState -> GameState
+recordFailure = over fuckups (+ 1)
+
+incrementHintCount :: GameState -> GameState
+incrementHintCount = over hints (+ 1)
+
+decrementHintCount :: GameState -> GameState
+decrementHintCount = over hints (subtract 1)
+
+giveHint hint player game = over (playerHands . at player . undefined) -- TODO

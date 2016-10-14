@@ -1,33 +1,34 @@
 module Transitions where
 
 import Types
-import GameState
 import Game
 
-import Control.Lens
-
-type Transition a = a -> GameState -> GameState
-
-playCard card game = if cardFits then putCardOnStack else discardCard <> failure
+cardPlayed :: Card -> GameState -> Either GameOver GameState
+cardPlayed card = endTurn . tryPlay . removeFromHand card
   where
-    cardFits = card `canStackOn` (stackWithColor (view color card))
-    stackWithColor color = view (playedCards . at color) game
-    canStackOn c = maybe True (canStack c)
-    
-    
-discardCard = undefined
-giveHint = undefined
+    tryPlay game =
+      if canPlayCard card game
+        then (checkHintBonus . putOnPlayedStack card) game
+        else putOnDiscardedStack card game
+    checkHintBonus
+      | isFive card = incrementHintCount
+      | otherwise = id
 
-cardPlayed :: Transition Card
-cardPlayed card game
-  | cardFits = over playedCards (play card) game
-  | otherwise = over discardedCards (card :) game
-  where
-    cardFits = onFirstElement (canStack card) existingStack
-    existingStack = view (playedCards . at (view color card)) game
-    play = undefined
+cardDiscarded :: Card -> GameState -> Either GameOver GameState
+cardDiscarded card = endTurn . putOnDiscardedStack card . removeFromHand card
 
-onFirstElement :: (a -> Bool) -> Maybe [a] -> Bool
-onFirstElement _ Nothing = True
-onFirstElement _ (Just []) = True
-onFirstElement f (Just (x:_)) = f x
+hintGiven :: Hint -> PlayerId -> GameState -> GameState
+hintGiven hint playerId = decrementHintCount . giveHint hint playerId
+
+endTurn :: GameState -> Either GameOver GameState
+endTurn game =
+  if any ($ game) [tooManyFailures, allStacksFilled]
+    then Left (gameOver game)
+    else Right game
+
+gameOver :: GameState -> GameOver
+gameOver _ = GameOver 0
+
+maybeIncrementHintCount :: Card -> GameState -> GameState
+maybeIncrementHintCount (Card _ Five) = incrementHintCount
+maybeIncrementHintCount _ = id

@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
@@ -7,11 +8,12 @@ import Data.List (intercalate)
 import Data.String (IsString)
 import Control.Lens (makeLenses)
 import Data.Map (Map)
+import qualified Data.Map as Map
 
 data Card = Card
   { _color :: Color
   , _number :: Number
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Ord)
 
 data Color
   = White
@@ -29,28 +31,39 @@ data Number
   | Five
   deriving (Ord, Show, Eq, Bounded, Enum)
 
+data GameOver =
+  GameOver Int
+
+isSucc
+  :: (Bounded t, Enum t, Eq t)
+  => t -> t -> Bool
+num1 `isSucc` num2 = (num1, num2) `elem` zip allNums (tail allNums)
+  where
+    allNums = [minBound .. maxBound]
+
 makeLenses ''Card
 
 newtype PlayerId =
   PlayerId String
   deriving (Eq, Ord, Show, IsString)
 
-data PlayerData =
-  PlayerData (Map PlayerId Hand)
+type Hand = Map Card [Fact]
 
-data Hand =
-  Hand [(Card, Knowledge)]
-  deriving (Show)
+getCards :: Hand -> [Card]
+getCards = Map.keys
 
-data Knowledge
-  = None
-  | Color
-  | Number
+createHand :: [Card] -> Hand
+createHand cards = Map.fromList (fmap (, []) cards)
+
+data Fact
+  = ColorFact Color
+  | NumberFact Number
+  | Not Fact
   deriving (Show, Eq)
 
 data GameState = GameState
   { _actingPlayer :: PlayerId
-  , _playerData :: Map PlayerId Hand
+  , _playerHands :: Map PlayerId Hand
   , _deck :: [Card]
   , _playedCards :: Map Color [Card]
   , _discardedCards :: [Card]
@@ -58,7 +71,9 @@ data GameState = GameState
   , _fuckups :: Int
   } deriving (Show)
 
-initGame p ps = GameState
+data Hint
+  = ColorHint Color
+  | NumberHint Number
 
 makeLenses ''GameState
 
