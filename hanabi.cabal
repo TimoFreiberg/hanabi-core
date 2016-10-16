@@ -15,10 +15,9 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-                     , src/types
   exposed-modules:     Game
                      , Connection
-                     , Transition
+                     , Transitions
                      , Types
   build-depends:       QuickCheck >= 2.8.2
                      , aeson

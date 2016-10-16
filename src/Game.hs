@@ -67,16 +67,16 @@ inGroupsOf n xs =
 --        it "has two threes" $ property $ propNNumbers 2 Three
 --        it "has two fours" $ property $ propNNumbers 2 Four
 --        it "has one five" $ property $ propNNumbers 1 Five
-initState :: PlayerId -> [PlayerId] -> IO GameState
+initState :: PlayerId -> [PlayerId] -> IO Game
 initState startId ids = do
   (cards, dk) <- dealCards (length cleanIds)
   let hands = fmap createHand cards
   let players = Map.fromList (zip cleanIds hands)
-  return (GameState startId players dk Map.empty [] initialHints 0)
+  return (Game startId players dk Map.empty [] initialHints 0)
   where
     cleanIds = startId : List.delete startId ids
 
-canPlayCard :: Card -> GameState -> Bool
+canPlayCard :: Card -> Game -> Bool
 canPlayCard (Card col num1) game =
   case getStack col game of
     [] -> num1 == One
@@ -86,42 +86,48 @@ isFive :: Card -> Bool
 isFive (Card _ Five) = True
 isFive _ = False
 
-tooManyFailures :: GameState -> Bool
+tooManyFailures :: Game -> Bool
 tooManyFailures game = view fuckups game >= maximumFailures
 
-allStacksFilled :: GameState -> Bool
+allStacksFilled :: Game -> Bool
 allStacksFilled =
   view
     (playedCards .
      to Map.elems . to (fmap length) . to (all (== length numbers)))
 
-getStack :: Color -> GameState -> [Card]
+getStack :: Color -> Game -> [Card]
 getStack col game = fromMaybe [] (view (playedCards . at col) game)
 
-removeFromHand :: Card -> GameState -> GameState
+removeFromHand :: Card -> Game -> Game
 removeFromHand card game = over handOfActivePlayer (Map.delete card) game
   where
     handOfActivePlayer = playerHands . at (view actingPlayer game) . non Map.empty
 
-putOnPlayedStack :: Card -> GameState -> GameState
+putOnPlayedStack :: Card -> Game -> Game
 putOnPlayedStack card =
   over (playedCards . at (view color card) . non []) (card :)
 
-putOnDiscardedStack :: Card -> GameState -> GameState
+putOnDiscardedStack :: Card -> Game -> Game
 putOnDiscardedStack card = over discardedCards (card :)
 
-recordFailure :: GameState -> GameState
+recordFailure :: Game -> Game
 recordFailure = over fuckups (+ 1)
 
-incrementHintCount :: GameState -> GameState
+incrementHintCount :: Game -> Game
 incrementHintCount = over hints (+ 1)
 
-decrementHintCount :: GameState -> GameState
+decrementHintCount :: Game -> Game
 decrementHintCount = over hints (subtract 1)
 
+giveHint :: Hint -> PlayerId -> Game -> Game
 giveHint hint player =
   over (playerHands . at player . non Map.empty) (applyHint hint)
 
-applyHint (ColorHint col) hand = Map.mapWithKey
-
-applyHint (NumberHint num) hand
+applyHint :: Hint -> Hand -> Hand
+applyHint (ColorHint col1) =
+  Map.mapWithKey ((:) . (factForColor (IsColor col1)))
+  where
+    factForColor fact (Card col2 _)
+      | col1 == col2 = fact
+      | otherwise = Not fact
+applyHint (NumberHint num) = undefined

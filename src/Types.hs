@@ -56,12 +56,12 @@ createHand :: [Card] -> Hand
 createHand cards = Map.fromList (fmap (, []) cards)
 
 data Fact
-  = ColorFact Color
-  | NumberFact Number
+  = IsColor Color
+  | IsNumber Number
   | Not Fact
   deriving (Show, Eq)
 
-data GameState = GameState
+data Game = Game
   { _actingPlayer :: PlayerId
   , _playerHands :: Map PlayerId Hand
   , _deck :: [Card]
@@ -75,7 +75,7 @@ data Hint
   = ColorHint Color
   | NumberHint Number
 
-makeLenses ''GameState
+makeLenses ''Game
 
 initialHints :: Int
 initialHints = 7

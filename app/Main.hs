@@ -3,7 +3,7 @@
 module Main where
 
 -- import Connection
--- import GameState
+-- import Game
 import Control.Concurrent (forkIO)
 import Control.Monad (forever, unless)
 import Control.Monad.Trans (liftIO)
