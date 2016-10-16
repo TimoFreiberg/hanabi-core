@@ -7,8 +7,8 @@ module Types where
 import Data.List (intercalate)
 import Data.String (IsString)
 import Control.Lens (makeLenses)
-import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 data Card = Card
   { _color :: Color

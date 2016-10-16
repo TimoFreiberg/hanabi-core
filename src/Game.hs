@@ -119,4 +119,9 @@ incrementHintCount = over hints (+ 1)
 decrementHintCount :: GameState -> GameState
 decrementHintCount = over hints (subtract 1)
 
-giveHint hint player game = over (playerHands . at player . undefined) -- TODO
+giveHint hint player =
+  over (playerHands . at player . non Map.empty) (applyHint hint)
+
+applyHint (ColorHint col) hand = Map.mapWithKey
+
+applyHint (NumberHint num) hand
