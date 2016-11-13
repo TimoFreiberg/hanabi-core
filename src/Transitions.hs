@@ -4,7 +4,7 @@ import Types
 import Game
 
 cardPlayed :: Card -> Game -> Either GameOver Game
-cardPlayed card = endTurn . tryPlay . removeFromHand card
+cardPlayed card = endTurn . drawCard . tryPlay . removeFromHand card
   where
     tryPlay game =
       if canPlayCard card game
@@ -15,19 +15,20 @@ cardPlayed card = endTurn . tryPlay . removeFromHand card
       | otherwise = id
 
 cardDiscarded :: Card -> Game -> Either GameOver Game
-cardDiscarded card = endTurn . putOnDiscardedStack card . removeFromHand card
+cardDiscarded card =
+  endTurn . drawCard . putOnDiscardedStack card . removeFromHand card
 
-hintGiven :: Hint -> PlayerId -> Game -> Game
-hintGiven hint playerId = decrementHintCount . giveHint hint playerId
+hintGiven :: Hint -> PlayerId -> Game -> Either GameOver Game
+hintGiven hint playerId = endTurn . decrementHintCount . giveHint hint playerId
 
 endTurn :: Game -> Either GameOver Game
 endTurn game =
   if any ($ game) [tooManyFailures, allStacksFilled]
     then Left (gameOver game)
-    else Right game
+    else Right (nextPlayer game)
 
 gameOver :: Game -> GameOver
-gameOver _ = GameOver 0
+gameOver game = GameOver (getScore game)
 
 maybeIncrementHintCount :: Card -> Game -> Game
 maybeIncrementHintCount (Card _ Five) = incrementHintCount

@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Game where
 
-import Control.Lens (at, non, over, view, to)
+import Control.Lens
+       (over, view, to, ix, traversed, mapped, at, non, set)
 import qualified Data.List as List (delete)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
 import System.Random.Shuffle (shuffleM)
 import Types
 
@@ -90,18 +93,19 @@ tooManyFailures :: Game -> Bool
 tooManyFailures game = view fuckups game >= maximumFailures
 
 allStacksFilled :: Game -> Bool
-allStacksFilled =
-  view
-    (playedCards .
-     to Map.elems . to (fmap length) . to (all (== length numbers)))
+allStacksFilled game =
+  length stacks == length colors &&
+  all (\stack -> length stack == length numbers) stacks
+  where
+    stacks = view (playedCards . to Map.elems) game
 
 getStack :: Color -> Game -> [Card]
-getStack col game = fromMaybe [] (view (playedCards . at col) game)
+getStack col = view (playedCards . ix col)
 
 removeFromHand :: Card -> Game -> Game
 removeFromHand card game = over handOfActivePlayer (Map.delete card) game
   where
-    handOfActivePlayer = playerHands . at (view actingPlayer game) . non Map.empty
+    handOfActivePlayer = playerHands . ix (view actingPlayer game)
 
 putOnPlayedStack :: Card -> Game -> Game
 putOnPlayedStack card =
@@ -124,10 +128,63 @@ giveHint hint player =
   over (playerHands . at player . non Map.empty) (applyHint hint)
 
 applyHint :: Hint -> Hand -> Hand
-applyHint (ColorHint col1) =
-  Map.mapWithKey ((:) . (factForColor (IsColor col1)))
+applyHint (ColorHint col1) = Map.mapWithKey (Set.insert . makeFact)
   where
-    factForColor fact (Card col2 _)
-      | col1 == col2 = fact
-      | otherwise = Not fact
-applyHint (NumberHint num) = undefined
+    makeFact (Card col2 _)
+      | col1 == col2 = IsColor col1
+      | otherwise = Not (IsColor col1)
+applyHint (NumberHint num1) = Map.mapWithKey (Set.insert . makeFact)
+  where
+    makeFact (Card _ num2)
+      | num1 == num2 = IsNumber num1
+      | otherwise = Not (IsNumber num1)
+
+nextPlayer :: Game -> Game
+nextPlayer game = set actingPlayer playerAfter game
+  where
+    oldPlayer = view actingPlayer game
+    playerAfter =
+      view
+        (playerHands . to ((!! 1) . dropWhile (/= oldPlayer) . cycle . Map.keys))
+        game
+
+drawCard :: Game -> Game
+drawCard game =
+  over
+    (playerHands . at (view actingPlayer game) . non Map.empty)
+    (Map.insert card Set.empty)
+    game
+  where
+    card = undefined
+
+getScore :: Game -> Int
+getScore =
+  sum .
+  view
+    (playedCards .
+     to (fmap (take 1)) .
+     traversed . to (fmap (view number)) . to (fmap numToInt))
+
+numToInt One = 1
+numToInt Two = 2
+numToInt Three = 3
+numToInt Four = 4
+numToInt Five = 5
+
+exampleCards =
+  [ Card Red One
+  , Card Red Two
+  , Card Red Three
+  , Card Red Four
+  , Card White One
+  , Card White Two
+  , Card Blue One
+  , Card Blue Three
+  , Card Blue Four
+  , Card Blue Five
+  ]
+
+exampleGame =
+  fmap
+    (\g -> foldl (flip putOnPlayedStack) g exampleCards)
+    (initState "1" ["2", "3"])
