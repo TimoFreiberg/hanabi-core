@@ -14,6 +14,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.Function (on)
 
 data Card = Card
   { _color :: Color
@@ -40,10 +41,10 @@ data GameOver =
   GameOver Int
   deriving (Ord, Show, Eq)
 
-isSucc
+isSuccessor
   :: (Bounded t, Enum t, Eq t)
   => t -> t -> Bool
-num1 `isSucc` num2 = (num1, num2) `elem` zip allNums (tail allNums)
+num1 `isSuccessor` num2 = (num1, num2) `elem` zip allNums (tail allNums)
   where
     allNums = [minBound .. maxBound]
 
@@ -53,19 +54,34 @@ newtype PlayerId =
   PlayerId Text
   deriving (Eq, Ord, Show, IsString)
 
-type Hand = Map Card (Set Fact)
+type Hand = [(Card, Set Fact)]
 
 getCards :: Hand -> [Card]
-getCards = Map.keys
+getCards = map fst
 
 createHand :: [Card] -> Hand
-createHand cards = Map.fromList (fmap (, Set.empty) cards)
+createHand = fmap (, Set.empty)
 
 data Fact
   = IsColor Color
   | IsNumber Number
   | Not Fact
   deriving (Show, Eq, Ord)
+
+isPositiveFact :: Fact -> Bool
+isPositiveFact (Not _) = False
+isPositiveFact _ = True
+
+isNumberFact :: Fact -> Bool
+isNumberFact (Not (IsNumber _)) = True
+isNumberFact (IsNumber _) = True
+isNumberFact _ = False
+
+differentType :: Fact -> Fact -> Bool
+differentType = (/=) `on` isNumberFact
+
+isColorFact :: Fact -> Bool
+isColorFact = not . isNumberFact
 
 data Game = Game
   { _actingPlayer :: PlayerId
@@ -75,11 +91,24 @@ data Game = Game
   , _discardedCards :: [Card]
   , _hints :: Int
   , _fuckups :: Int
+  , _lastPlayer :: Maybe PlayerId
   } deriving (Show)
 
 data Hint
   = ColorHint Color
   | NumberHint Number
+
+class IsHint a  where
+  toHint :: a -> Hint
+
+instance IsHint Hint where
+  toHint = id
+
+instance IsHint Color where
+  toHint = ColorHint
+
+instance IsHint Number where
+  toHint = NumberHint
 
 makeLenses ''Game
 

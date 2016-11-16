@@ -124,20 +124,36 @@ decrementHintCount :: Game -> Game
 decrementHintCount = over hints (subtract 1)
 
 giveHint :: Hint -> PlayerId -> Game -> Game
-giveHint hint player =
-  over (playerHands . at player . non Map.empty) (applyHint hint)
+giveHint hint player = over (playerHands . at player . non []) (applyHint hint)
 
 applyHint :: Hint -> Hand -> Hand
-applyHint (ColorHint col1) = Map.mapWithKey (Set.insert . makeFact)
+applyHint (ColorHint col1) =
+  over traversed (\(card, facts) -> (card, insertFact (makeFact card) facts))
   where
     makeFact (Card col2 _)
       | col1 == col2 = IsColor col1
       | otherwise = Not (IsColor col1)
-applyHint (NumberHint num1) = Map.mapWithKey (Set.insert . makeFact)
+applyHint (NumberHint num1) =
+  over traversed (\(card, facts) -> (card, insertFact (makeFact card) facts))
   where
     makeFact (Card _ num2)
       | num1 == num2 = IsNumber num1
       | otherwise = Not (IsNumber num1)
+
+insertFact :: Fact -> Set Fact -> Set Fact
+insertFact fact@(Not _) facts
+  | containsPositiveHint = facts
+  | otherwise = Set.insert fact facts
+  where
+    containsPositiveHint =
+      setContains (\f -> isPositiveFact f || fact `differentType` f) facts
+insertFact fact facts =
+  Set.insert
+    fact
+    (Set.filter (\f -> isPositiveFact f || fact `differentType` f) facts)
+
+setContains :: (a -> Bool) -> Set a -> Bool
+setContains p s = not (null (Set.filter p s))
 
 nextPlayer :: Game -> Game
 nextPlayer game = set actingPlayer playerAfter game
@@ -145,17 +161,30 @@ nextPlayer game = set actingPlayer playerAfter game
     oldPlayer = view actingPlayer game
     playerAfter =
       view
-        (playerHands . to ((!! 1) . dropWhile (/= oldPlayer) . cycle . Map.keys))
+        (playerHands .
+         to (Map.keys >>> cycle >>> dropWhile (/= oldPlayer) >>> (!! 1)))
         game
 
-drawCard :: Game -> Game
-drawCard game =
-  over
-    (playerHands . at (view actingPlayer game) . non Map.empty)
-    (Map.insert card Set.empty)
-    game
-  where
-    card = undefined
+popFromDeck :: Game -> Maybe (Card, Game)
+popFromDeck game =
+  case view deck game of
+    [] -> Nothing
+    (card:_) -> Just (card, over deck (drop 1) game)
+
+addToHand :: Card -> Game -> Game
+addToHand card = over activeHand ((card, Set.empty) :)
+
+startLastRound :: Game -> Game
+startLastRound game =
+  case view lastPlayer game of
+    Nothing -> set lastPlayer (Just (activeP game)) game
+    Just _ -> game
+
+deckEmpty :: Game -> Bool
+deckEmpty = view (deck . to null)
+
+lastRoundFinished :: Game -> Bool
+lastRoundFinished game = maybe False (activeP game ==) (view lastPlayer game)
 
 getScore :: Game -> Int
 getScore =
