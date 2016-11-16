@@ -3,10 +3,14 @@
 module Game where
 
 import Control.Lens
-       (over, view, to, ix, traversed, mapped, at, non, set)
-import qualified Data.List as List (delete)
+       (over, view, to, ix, traversed, at, non, set, lens, Lens')
+
+import Control.Arrow ((>>>))
+import qualified Data.List as List (delete, deleteBy)
+import Data.Function (on)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Set (Set)
 import System.Random.Shuffle (shuffleM)
 import Types
 
@@ -75,7 +79,7 @@ initState startId ids = do
   (cards, dk) <- dealCards (length cleanIds)
   let hands = fmap createHand cards
   let players = Map.fromList (zip cleanIds hands)
-  return (Game startId players dk Map.empty [] initialHints 0)
+  return (Game startId players dk Map.empty [] initialHints 0 Nothing)
   where
     cleanIds = startId : List.delete startId ids
 
@@ -83,7 +87,7 @@ canPlayCard :: Card -> Game -> Bool
 canPlayCard (Card col num1) game =
   case getStack col game of
     [] -> num1 == One
-    Card _ num2:_ -> num1 `isSucc` num2
+    Card _ num2:_ -> num2 `isSuccessor` num1
 
 isFive :: Card -> Bool
 isFive (Card _ Five) = True
@@ -103,9 +107,8 @@ getStack :: Color -> Game -> [Card]
 getStack col = view (playedCards . ix col)
 
 removeFromHand :: Card -> Game -> Game
-removeFromHand card game = over handOfActivePlayer (Map.delete card) game
-  where
-    handOfActivePlayer = playerHands . ix (view actingPlayer game)
+removeFromHand card =
+  over activeHand (List.deleteBy ((==) `on` fst) (card, Set.empty))
 
 putOnPlayedStack :: Card -> Game -> Game
 putOnPlayedStack card =
@@ -194,26 +197,24 @@ getScore =
      to (fmap (take 1)) .
      traversed . to (fmap (view number)) . to (fmap numToInt))
 
+numToInt :: Number -> Int
 numToInt One = 1
 numToInt Two = 2
 numToInt Three = 3
 numToInt Four = 4
 numToInt Five = 5
 
-exampleCards =
-  [ Card Red One
-  , Card Red Two
-  , Card Red Three
-  , Card Red Four
-  , Card White One
-  , Card White Two
-  , Card Blue One
-  , Card Blue Three
-  , Card Blue Four
-  , Card Blue Five
-  ]
+exampleGame :: IO Game
+exampleGame = initState "1" ["2", "3"]
 
-exampleGame =
-  fmap
-    (\g -> foldl (flip putOnPlayedStack) g exampleCards)
-    (initState "1" ["2", "3"])
+cardAt :: Int -> Game -> Card
+cardAt i = view (activeHand . to (fmap fst >>> (!! i)))
+
+activeHand :: Lens' Game Hand
+activeHand =
+  lens
+    (\game -> view (playerHands . at (activeP game) . non []) game)
+    (\game hand -> set (playerHands . at (activeP game) . non []) hand game)
+
+activeP :: Game -> PlayerId
+activeP = view actingPlayer
