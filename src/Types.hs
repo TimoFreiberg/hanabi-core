@@ -120,6 +120,38 @@ prettyPrint
   => a -> IO ()
 prettyPrint = putStrLn . pprint
 
+fairPrint :: Game -> IO ()
+fairPrint (Game actingPlayer' playerHands' _ playedCards' discardedCards' hints' fuckups' lastPlayer') =
+  putStrLn
+    (intercalate
+       "\n"
+       [ "Active: " ++ pprint actingPlayer'
+       , ""
+       , "Hands:"
+       , concat
+           [ pprint pId ++
+            ":\n" ++
+            concat
+              [ show i ++
+               ". " ++
+               (if pId == actingPlayer'
+                  then ""
+                  else pprint card) ++
+               " " ++ pprint facts ++ "\n"
+              | (i, (card, facts)) <- zip [0 :: Int ..] hand ] ++
+            "\n"
+           | (pId, hand) <- Map.assocs playerHands' ]
+       , "Played Cards:"
+       , pprint playedCards'
+       , "Discarded Cards:"
+       , "  " ++ pprint discardedCards'
+       , "hints: " ++ show hints'
+       , "fuckups: " ++ show fuckups'
+       , case lastPlayer' of
+           Nothing -> ""
+           Just lastPlayerId -> "\nLast Player: " ++ show lastPlayerId
+       ])
+
 class Pprint a  where
   pprint :: a -> String
 
@@ -149,7 +181,7 @@ instance Pprint a =>
 
 instance Pprint a =>
          Pprint (Set a) where
-  pprint = Set.foldl' (\str a -> str ++ pprint a) ""
+  pprint = pprint . Set.elems
 
 instance (Pprint k, Pprint v) =>
          Pprint (Map k v) where
@@ -159,7 +191,7 @@ instance (Pprint k, Pprint v) =>
       | (k, v) <- Map.assocs m ]
 
 instance Pprint Game where
-  pprint (Game actingPlayer' playerHands' deck' playedCards' discardedCards' hints' fuckups') =
+  pprint (Game actingPlayer' playerHands' deck' playedCards' discardedCards' hints' fuckups' lastPlayer') =
     intercalate
       "\n"
       [ "Active: " ++ pprint actingPlayer'
@@ -170,7 +202,7 @@ instance Pprint Game where
            ":\n" ++
            concat
              [ "  " ++ pprint card ++ " " ++ pprint facts ++ "\n"
-             | (card, facts) <- Map.assocs hand ] ++
+             | (card, facts) <- hand ] ++
            "\n"
           | (pId, hand) <- Map.assocs playerHands' ]
       , "Played Cards:"
@@ -179,7 +211,9 @@ instance Pprint Game where
       , "  " ++ pprint discardedCards'
       , "hints: " ++ show hints'
       , "fuckups: " ++ show fuckups'
-      , ""
+      , case lastPlayer' of
+          Nothing -> ""
+          Just lastPlayerId -> "\nLast Player: " ++ show lastPlayerId
       , "Deck:"
       , pprint deck'
       ]
