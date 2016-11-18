@@ -43,7 +43,10 @@ getAllStates = readIORef gameRef
 getStateAt :: Int -> IO Game
 getStateAt i = fmap (!! i) getAllStates
 
+printStateAt :: Int -> IO ()
 printStateAt i = getStateAt i >>= prettyPrint
+
+undo = undefined
 
 hint
   :: IsHint a

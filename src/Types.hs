@@ -201,8 +201,8 @@ instance Pprint Game where
           [ pprint pId ++
            ":\n" ++
            concat
-             [ "  " ++ pprint card ++ " " ++ pprint facts ++ "\n"
-             | (card, facts) <- hand ] ++
+             [ show i ++ ". " ++ pprint card ++ " " ++ pprint facts ++ "\n"
+             | (i, (card, facts)) <- zip [0 :: Int ..] hand ] ++
            "\n"
           | (pId, hand) <- Map.assocs playerHands' ]
       , "Played Cards:"

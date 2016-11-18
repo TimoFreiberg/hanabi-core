@@ -145,11 +145,11 @@ applyHint (NumberHint num1) =
 
 insertFact :: Fact -> Set Fact -> Set Fact
 insertFact fact@(Not _) facts
-  | containsPositiveHint = facts
+  | containsPositive = facts
   | otherwise = Set.insert fact facts
   where
-    containsPositiveHint =
-      setContains (\f -> isPositiveFact f || fact `differentType` f) facts
+    containsPositive =
+      setContains (\f -> isPositiveFact f && not (fact `differentType` f)) facts
 insertFact fact facts =
   Set.insert
     fact
