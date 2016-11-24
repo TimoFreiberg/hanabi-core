@@ -7,7 +7,8 @@ import Game
 import Transitions
 
 import Data.IORef
-import System.IO.Unsafe
+import System.IO.Unsafe (unsafePerformIO)
+import Control.Monad (when)
 
 {-# NOINLINE gameRef #-}
 
@@ -35,7 +36,7 @@ recordGame :: Game -> IO ()
 recordGame game = modifyIORef gameRef (game :)
 
 getLastState :: IO Game
-getLastState = fmap head (readIORef gameRef)
+getLastState = fmap head getAllStates
 
 getAllStates :: IO [Game]
 getAllStates = readIORef gameRef
@@ -46,7 +47,10 @@ getStateAt i = fmap (!! i) getAllStates
 printStateAt :: Int -> IO ()
 printStateAt i = getStateAt i >>= prettyPrint
 
-undo = undefined
+undo :: IO ()
+undo = do
+  states <- getAllStates
+  when (length states >= 2) (writeIORef gameRef (drop 1 states))
 
 hint
   :: IsHint a
