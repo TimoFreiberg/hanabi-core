@@ -1,7 +1,7 @@
-module Transitions where
+module Hanabi.Transitions where
 
-import Types
-import Game
+import Hanabi.Types
+import Hanabi.Game
 
 cardPlayed :: Card -> Game -> Either GameOver Game
 cardPlayed card = endTurn . drawCard . tryPlay . removeFromHand card

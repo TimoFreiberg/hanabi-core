@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Repl where
+module Hanabi.Repl where
 
-import Types
-import Game
-import Transitions
+import Hanabi.Types
+import Hanabi.Game
+import Hanabi.Transitions
 
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)

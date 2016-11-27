@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Game where
+module Hanabi.Game where
 
 import Control.Lens
        (over, view, to, ix, traversed, at, non, set, lens, Lens')
@@ -12,7 +12,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Set (Set)
 import System.Random.Shuffle (shuffleM)
-import Types
+
+import Hanabi.Types
 
 colors :: [Color]
 colors = [minBound .. maxBound]

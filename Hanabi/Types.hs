@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Types where
+module Hanabi.Types where
 
 import Data.List (intercalate)
 import Data.String (IsString)
@@ -37,7 +37,7 @@ data Number
   | Five
   deriving (Ord, Show, Eq, Bounded, Enum)
 
-data GameOver =
+newtype GameOver =
   GameOver Int
   deriving (Ord, Show, Eq)
 
