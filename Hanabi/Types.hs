@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -15,11 +16,12 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Function (on)
+import GHC.Generics
 
 data Card = Card
   { _color :: Color
   , _number :: Number
-  } deriving (Show, Eq, Ord)
+  } deriving (Show, Eq, Ord, Generic)
 
 data Color
   = White
@@ -27,7 +29,7 @@ data Color
   | Green
   | Blue
   | Red
-  deriving (Ord, Show, Eq, Bounded, Enum)
+  deriving (Ord, Show, Eq, Bounded, Enum, Generic)
 
 data Number
   = One
@@ -35,11 +37,11 @@ data Number
   | Three
   | Four
   | Five
-  deriving (Ord, Show, Eq, Bounded, Enum)
+  deriving (Ord, Show, Eq, Bounded, Enum, Generic)
 
 newtype GameOver =
   GameOver Int
-  deriving (Ord, Show, Eq)
+  deriving (Ord, Show, Eq, Generic)
 
 isSuccessor
   :: (Bounded t, Enum t, Eq t)
@@ -52,7 +54,7 @@ makeLenses ''Card
 
 newtype PlayerId =
   PlayerId Text
-  deriving (Eq, Ord, Show, IsString)
+  deriving (Eq, Ord, Show, IsString, Generic)
 
 type Hand = [(Card, Set Fact)]
 
@@ -66,7 +68,7 @@ data Fact
   = IsColor Color
   | IsNumber Number
   | Not Fact
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic)
 
 isPositiveFact :: Fact -> Bool
 isPositiveFact (Not _) = False
@@ -92,11 +94,12 @@ data Game = Game
   , _hints :: Int
   , _fuckups :: Int
   , _lastPlayer :: Maybe PlayerId
-  } deriving (Show)
+  } deriving (Show, Generic)
 
 data Hint
   = ColorHint Color
   | NumberHint Number
+  deriving (Show, Generic)
 
 class IsHint a  where
   toHint :: a -> Hint
