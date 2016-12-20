@@ -15,10 +15,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-    Hanabi.Game
-    Hanabi.Transitions
     Hanabi.Types
-    Hanabi.Repl
   build-depends:
       QuickCheck >= 2.8.2
     , aeson
