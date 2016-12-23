@@ -45,7 +45,7 @@ makeLenses ''Card
 
 newtype PlayerId =
   PlayerId Text
-  deriving (Eq, Ord, Show, IsString, Generic)
+  deriving (Eq, Ord, Show, IsString, Generic, FromJSON, ToJSON)
 
 type Hand = [(Card, Set Fact)]
 
