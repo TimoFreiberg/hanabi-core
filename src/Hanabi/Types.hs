@@ -92,7 +92,7 @@ instance ToJSON Color
 instance ToJSON Hint
 
 instance ToJSON Card where
-  toEncoding = Aeson.genericToEncoding requestOptions
+  toEncoding = Aeson.genericToEncoding dropUnderscoreOptions
 
 instance FromJSON Number
 
@@ -101,10 +101,10 @@ instance FromJSON Color
 instance FromJSON Hint
 
 instance FromJSON Card where
-  parseJSON = Aeson.genericParseJSON requestOptions
+  parseJSON = Aeson.genericParseJSON dropUnderscoreOptions
 
-requestOptions :: Aeson.Options
-requestOptions =
+dropUnderscoreOptions :: Aeson.Options
+dropUnderscoreOptions =
   Aeson.defaultOptions
   { Aeson.fieldLabelModifier = dropPrefixUnderscore
   }
