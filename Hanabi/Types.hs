@@ -1,22 +1,20 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Hanabi.Types where
 
-import Data.List (intercalate)
 import Data.String (IsString)
 import Control.Lens (makeLenses)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Text (Text)
-import qualified Data.Text as Text
-import Data.Function (on)
 import GHC.Generics
+import Data.Aeson (ToJSON, FromJSON)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
+import Data.List (isPrefixOf)
 
 data Card = Card
   { _color :: Color
@@ -43,13 +41,6 @@ newtype GameOver =
   GameOver Int
   deriving (Ord, Show, Eq, Generic)
 
-isSuccessor
-  :: (Bounded t, Enum t, Eq t)
-  => t -> t -> Bool
-num1 `isSuccessor` num2 = (num1, num2) `elem` zip allNums (tail allNums)
-  where
-    allNums = [minBound .. maxBound]
-
 makeLenses ''Card
 
 newtype PlayerId =
@@ -58,32 +49,11 @@ newtype PlayerId =
 
 type Hand = [(Card, Set Fact)]
 
-getCards :: Hand -> [Card]
-getCards = map fst
-
-createHand :: [Card] -> Hand
-createHand = fmap (, Set.empty)
-
 data Fact
   = IsColor Color
   | IsNumber Number
   | Not Fact
   deriving (Show, Eq, Ord, Generic)
-
-isPositiveFact :: Fact -> Bool
-isPositiveFact (Not _) = False
-isPositiveFact _ = True
-
-isNumberFact :: Fact -> Bool
-isNumberFact (Not (IsNumber _)) = True
-isNumberFact (IsNumber _) = True
-isNumberFact _ = False
-
-differentType :: Fact -> Fact -> Bool
-differentType = (/=) `on` isNumberFact
-
-isColorFact :: Fact -> Bool
-isColorFact = not . isNumberFact
 
 data Game = Game
   { _actingPlayer :: PlayerId
@@ -115,108 +85,31 @@ instance IsHint Number where
 
 makeLenses ''Game
 
-initialHints :: Int
-initialHints = 7
+instance ToJSON Number
 
-prettyPrint
-  :: Pprint a
-  => a -> IO ()
-prettyPrint = putStrLn . pprint
+instance ToJSON Color
 
-fairPrint :: Game -> IO ()
-fairPrint (Game actingPlayer' playerHands' _ playedCards' discardedCards' hints' fuckups' lastPlayer') =
-  putStrLn
-    (intercalate
-       "\n"
-       [ "Active: " ++ pprint actingPlayer'
-       , ""
-       , "Hands:"
-       , concat
-           [ pprint pId ++
-            ":\n" ++
-            concat
-              [ show i ++
-               ". " ++
-               (if pId == actingPlayer'
-                  then ""
-                  else pprint card) ++
-               " " ++ pprint facts ++ "\n"
-              | (i, (card, facts)) <- zip [0 :: Int ..] hand ] ++
-            "\n"
-           | (pId, hand) <- Map.assocs playerHands' ]
-       , "Played Cards:"
-       , pprint playedCards'
-       , "Discarded Cards:"
-       , "  " ++ pprint discardedCards'
-       , "hints: " ++ show hints'
-       , "fuckups: " ++ show fuckups'
-       , case lastPlayer' of
-           Nothing -> ""
-           Just lastPlayerId -> "\nLast Player: " ++ show lastPlayerId
-       ])
+instance ToJSON Hint
 
-class Pprint a  where
-  pprint :: a -> String
+instance ToJSON Card where
+  toEncoding = Aeson.genericToEncoding requestOptions
 
-instance Pprint Color where
-  pprint = take 1 . show
+instance FromJSON Number
 
-instance Pprint Number where
-  pprint = show . (+ 1) . fromEnum
+instance FromJSON Color
 
-instance Pprint Fact where
-  pprint (Not f) = "!" ++ pprint f
-  pprint (IsColor c) = pprint c
-  pprint (IsNumber n) = pprint n
+instance FromJSON Hint
 
-instance Pprint Card where
-  pprint (Card col num) = "(" ++ pprint col ++ " " ++ pprint num ++ ")"
+instance FromJSON Card where
+  parseJSON = Aeson.genericParseJSON requestOptions
 
-instance Pprint Text where
-  pprint = Text.unpack
+requestOptions :: Aeson.Options
+requestOptions =
+  Aeson.defaultOptions
+  { Aeson.fieldLabelModifier = dropPrefixUnderscore
+  }
 
-instance Pprint PlayerId where
-  pprint (PlayerId s) = "Player " ++ pprint s
-
-instance Pprint a =>
-         Pprint [a] where
-  pprint xs = concat ["[", intercalate ", " (map pprint xs), "]"]
-
-instance Pprint a =>
-         Pprint (Set a) where
-  pprint = pprint . Set.elems
-
-instance (Pprint k, Pprint v) =>
-         Pprint (Map k v) where
-  pprint m =
-    concat
-      [ pprint k ++ ":" ++ pprint v ++ "\n"
-      | (k, v) <- Map.assocs m ]
-
-instance Pprint Game where
-  pprint (Game actingPlayer' playerHands' deck' playedCards' discardedCards' hints' fuckups' lastPlayer') =
-    intercalate
-      "\n"
-      [ "Active: " ++ pprint actingPlayer'
-      , ""
-      , "Hands:"
-      , concat
-          [ pprint pId ++
-           ":\n" ++
-           concat
-             [ show i ++ ". " ++ pprint card ++ " " ++ pprint facts ++ "\n"
-             | (i, (card, facts)) <- zip [0 :: Int ..] hand ] ++
-           "\n"
-          | (pId, hand) <- Map.assocs playerHands' ]
-      , "Played Cards:"
-      , pprint playedCards'
-      , "Discarded Cards:"
-      , "  " ++ pprint discardedCards'
-      , "hints: " ++ show hints'
-      , "fuckups: " ++ show fuckups'
-      , case lastPlayer' of
-          Nothing -> ""
-          Just lastPlayerId -> "\nLast Player: " ++ show lastPlayerId
-      , "Deck:"
-      , pprint deck'
-      ]
+dropPrefixUnderscore :: String -> String
+dropPrefixUnderscore s
+  | "_" `isPrefixOf` s = drop 1 s
+  | otherwise = s

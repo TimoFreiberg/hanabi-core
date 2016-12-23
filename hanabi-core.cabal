@@ -17,21 +17,11 @@ library
   exposed-modules:
     Hanabi.Types
   build-depends:
-      QuickCheck >= 2.8.2
+      base >= 4.7 && < 5
     , aeson
-    , base >= 4.7 && < 5
-    , bytestring >= 0.10.6.0
     , containers >= 0.5.6.2
-    , hspec
     , lens
-    , mtl >= 2.2.1
-    , network >= 2.6.3.1
-    , random-shuffle
-    , servant-server
     , text >= 1.2.2.1
-    , wai
-    , warp
-    , websockets
   default-language:    Haskell2010
 
 test-suite hanabi-test
